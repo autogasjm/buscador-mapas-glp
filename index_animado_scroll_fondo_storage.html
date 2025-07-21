@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Buscador de Estaciones GLP</title>
+  <style>
+    
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(rgba(238,241,245,0.92), rgba(238,241,245,0.92)), 
+              url('https://images.unsplash.com/photo-1612521095823-9aa3be7a4f4f?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+  background-size: cover;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+
+    .contenedor {
+      width: 100%;
+      max-width: 480px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      padding: 2rem;
+      box-sizing: border-box;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 1.4rem;
+      text-align: center;
+    }
+
+    p.instruccion {
+      color: #555;
+      margin-top: 0;
+      margin-bottom: 1.5rem;
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px 14px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    .resultados {
+      margin-top: 1rem;
+      display: none;
+    }
+
+    .card {
+      background: #f9f9f9;
+      margin-bottom: 12px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+    }
+
+    .card h4 {
+      margin: 0 0 6px;
+      color: #333;
+      font-size: 1rem;
+    }
+
+    .map-btn {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 6px 10px;
+      background: #0078D4;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .map-btn:hover {
+      background: #005fa3;
+    }
+  
+.resultados {
+  margin-top: 1rem;
+  display: none;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.resultados.mostrar {
+  display: block;
+  opacity: 1;
+}
+
+.resultados.ocultar {
+  opacity: 0;
+  transition: opacity 0.2s ease-in;
+}
+
+.caja-resultados {
+  display: none;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  padding: 1rem;
+  background: #fefefe;
+  max-height: 300px;
+  overflow-y: auto;
+  transition: opacity 0.3s ease;
+}
+
+</style>
+</head>
+<body>
+
+  <div class="contenedor">
+    <h2>🚗 Estaciones de Carga GLP</h2>
+    <p class="instruccion">
+      Selecciona una región y luego una comuna para ver las estaciones disponibles. Puedes hacer clic en "Ver en Google Maps" para obtener la ubicación exacta.
+    </p>
+
+    <select id="regionFiltro">
+      <option value="">Selecciona una región</option>
+    </select>
+
+    <select id="comunaFiltro" disabled>
+      <option value="">Selecciona una comuna</option>
+    </select>
+
+    <div id="resultados" class="resultados">
+    <div class="caja-resultados" style="display: none; border: 1px solid #ccc; border-radius: 12px; padding: 1rem; background: #fefefe;"></div>
+  </div>
+  </div>
+
+  
+<script>
+  const estaciones = [
+    { region: "Tarapacá", comuna: "Alto Hospicio", direccion: "Ruta A-616, Manzana C, Lote A" },
+    { region: "Atacama", comuna: "Copiapó", direccion: "Los Loros 1264" },
+    { region: "Coquimbo", comuna: "La Serena", direccion: "Balmaceda, Paradero 10 1/2" },
+    { region: "Arica", comuna: "Arica", direccion: "Alejandro Azolas 2693" },
+    { region: "Ñuble", comuna: "Chillán", direccion: "Av. Collín 1101" },
+    { region: "Maule", comuna: "Linares", direccion: "Av. León Bustos 1319" },
+    { region: "Maule", comuna: "Curicó", direccion: "Pasaje 32, 665" },
+    { region: "Maule", comuna: "Talca", direccion: "Uno Norte 2315" },
+    { region: "Biobío", comuna: "Concepción", direccion: "Anibal Pinto 1835" },
+    { region: "Biobío", comuna: "Los Ángeles", direccion: "Av. Francisco Encina 1451" },
+    { region: "Araucanía", comuna: "Angol", direccion: "Juan Sallato 2938" },
+    { region: "Araucanía", comuna: "Temuco", direccion: "Manuel Recabarren 01940" },
+    { region: "Ríos", comuna: "Valdivia", direccion: "Schneider 3620" },
+    { region: "Ríos", comuna: "Valdivia", direccion: "Av. Pedro Aguirre Cerda 670" },
+    { region: "Lagos", comuna: "Osorno", direccion: "Av. Mackenna 2019" },
+    { region: "Lagos", comuna: "Puerto Montt", direccion: "Maximiliano Uribe 2067" },
+    { region: "O'Higgins", comuna: "Rengo", direccion: "Luis Jorquera 1291" },
+    { region: "O'Higgins", comuna: "Rancagua", direccion: "Manuel Montt 0480" },
+    { region: "O'Higgins", comuna: "Rancagua", direccion: "Bernardo O'Higgins 1090" },
+    { region: "Metropolitana", comuna: "Quinta Normal", direccion: "Vicuña Rozas 5891" },
+    { region: "Metropolitana", comuna: "Pudahuel", direccion: "San Pablo 8529" },
+    { region: "Metropolitana", comuna: "Peñalolén", direccion: "Av. Tobalaba 11567" },
+    { region: "Metropolitana", comuna: "Independencia", direccion: "Av. Independencia 1517" },
+    { region: "Metropolitana", comuna: "Vitacura", direccion: "Av. Vitacura 5579" },
+    { region: "Metropolitana", comuna: "Providencia", direccion: "Av. Francisco Bilbao 2682" },
+    { region: "Metropolitana", comuna: "Pedro Aguirre Cerda", direccion: "Bascuñán Guerrero 2445" },
+    { region: "Metropolitana", comuna: "Ñuñoa", direccion: "Av. José Pedro Alessandri 1039" },
+    { region: "Metropolitana", comuna: "La Granja", direccion: "Yungay 0923" },
+    { region: "Metropolitana", comuna: "La Florida", direccion: "Real Alicante 6698" },
+    { region: "Metropolitana", comuna: "El Bosque", direccion: "Av. Lo Espejo 0450" },
+    { region: "Metropolitana", comuna: "Conchalí", direccion: "Av. Independencia 6117" },
+    { region: "Metropolitana", comuna: "Macul", direccion: "Camino Agrícola 2589" },
+    { region: "Metropolitana", comuna: "Puente Alto", direccion: "Eyzaguirre 2816" },
+    { region: "Metropolitana", comuna: "Puente Alto", direccion: "Av. Eyzaguirre 2436" },
+    { region: "Valparaíso", comuna: "Viña del Mar", direccion: "Av. Alessandri 3401" },
+    { region: "Valparaíso", comuna: "Quilpué", direccion: "Freire 677" },
+    { region: "Valparaíso", comuna: "Quillota", direccion: "Blanco Encalada 661" },
+    { region: "Valparaíso", comuna: "Valparaíso", direccion: "Av. Playa Ancha 697" },
+    { region: "Valparaíso", comuna: "Valparaíso", direccion: "Errázuriz 2364" }
+  ];
+
+  const regionFiltro = document.getElementById("regionFiltro");
+  const comunaFiltro = document.getElementById("comunaFiltro");
+  const resultadosDiv = document.getElementById("resultados");
+
+  const regiones = [...new Set(estaciones.map(e => e.region))];
+  // Cargar selección previa si existe
+  const savedRegion = localStorage.getItem("regionSeleccionada");
+  const savedComuna = localStorage.getItem("comunaSeleccionada");
+
+  if (savedRegion) {
+    regionFiltro.value = savedRegion;
+    const comunas = [...new Set(estaciones.filter(e => e.region === savedRegion).map(e => e.comuna))];
+    comunas.forEach(comuna => {
+      const opt = document.createElement("option");
+      opt.value = comuna;
+      opt.textContent = comuna;
+      comunaFiltro.appendChild(opt);
+    });
+    comunaFiltro.disabled = false;
+  }
+
+  if (savedComuna) {
+    comunaFiltro.value = savedComuna;
+  }
+
+  mostrarResultados();
+
+  regionFiltro.addEventListener("change", () => {
+    const regionSeleccionada = regionFiltro.value;
+    localStorage.setItem("regionSeleccionada", regionSeleccionada);
+    comunaFiltro.innerHTML = '<option value="">Selecciona una comuna</option>';
+    comunaFiltro.disabled = !regionSeleccionada;
+
+    if (regionSeleccionada) {
+      const comunas = [...new Set(estaciones.filter(e => e.region === regionSeleccionada).map(e => e.comuna))];
+      comunas.forEach(comuna => {
+        const opt = document.createElement("option");
+        opt.value = comuna;
+        opt.textContent = comuna;
+        comunaFiltro.appendChild(opt);
+      });
+    }
+
+    localStorage.removeItem("comunaSeleccionada");
+    mostrarResultados();
+  });
+
+  comunaFiltro.addEventListener("change", () => {
+    localStorage.setItem("comunaSeleccionada", comunaFiltro.value);
+    mostrarResultados();
+  });
+
+  regiones.forEach(region => {
+    const opt = document.createElement("option");
+    opt.value = region;
+    opt.textContent = region;
+    regionFiltro.appendChild(opt);
+  });
+
+  regionFiltro.addEventListener("change", () => {
+    const regionSeleccionada = regionFiltro.value;
+    comunaFiltro.innerHTML = '<option value="">Selecciona una comuna</option>';
+    comunaFiltro.disabled = !regionSeleccionada;
+
+    if (regionSeleccionada) {
+      const comunas = [...new Set(estaciones.filter(e => e.region === regionSeleccionada).map(e => e.comuna))];
+      comunas.forEach(comuna => {
+        const opt = document.createElement("option");
+        opt.value = comuna;
+        opt.textContent = comuna;
+        comunaFiltro.appendChild(opt);
+      });
+    }
+
+    mostrarResultados();
+  });
+
+  comunaFiltro.addEventListener("change", mostrarResultados);
+
+  function mostrarResultados() {
+    const region = regionFiltro.value;
+    const comuna = comunaFiltro.value;
+
+    const coincidencias = estaciones.filter(e =>
+      (!region || e.region === region) &&
+      (!comuna || e.comuna === comuna)
+    );
+
+    const caja = resultadosDiv.querySelector('.caja-resultados');
+    caja.innerHTML = "";
+
+    if (coincidencias.length > 0) {
+      coincidencias.forEach(est => {
+        const card = document.createElement("div");
+        card.className = "card";
+        const direccionEncoded = encodeURIComponent(`${est.direccion}, ${est.comuna}, Chile`);
+        card.innerHTML = `
+          <h4>${est.region} - ${est.comuna}</h4>
+          <p>${est.direccion}</p>
+          <a class="map-btn" target="_blank" href="https://www.google.com/maps/search/?api=1&query=${direccionEncoded}">
+            Ver en Google Maps
+          </a>`;
+        caja.appendChild(card);
+      });
+      resultadosDiv.classList.add("mostrar");
+      resultadosDiv.classList.remove("ocultar");
+      caja.style.display = "block";
+    } else {
+      resultadosDiv.classList.add("ocultar");
+      resultadosDiv.classList.remove("mostrar");
+      caja.style.display = "none";
+    }
+  }
+</script>
+
+
+</body>
+</html>
