@@ -2,299 +2,435 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Buscador de Estaciones GLP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Red de Carga GLP - JM Autogas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
   <style>
+    :root {
+      /* --- VARIABLES MODO OLED (Dark) --- */
+      --bg-deep: #000000;
+      --text-main: #ffffff;
+      --text-sec: #a3a3a3;
+      
+      --card-bg: rgba(18, 18, 18, 0.95);
+      --card-border: rgba(255, 255, 255, 0.15);
+      --input-bg: rgba(30, 30, 30, 0.9);
+      
+      --accent: #22c55e;
+      --accent-glow: rgba(34, 197, 94, 0.5);
+      
+      --btn-bg: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    }
+
+    /* --- VARIABLES MODO LIGHT --- */
+    [data-theme="light"] {
+      --bg-deep: #f0f2f5;
+      --text-main: #0f172a;
+      --text-sec: #64748b;
+      
+      --card-bg: #ffffff;
+      --card-border: rgba(0, 0, 0, 0.1);
+      --input-bg: #f8fafc;
+      
+      --accent: #16a34a;
+      --accent-glow: rgba(22, 163, 74, 0.2);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-deep);
+      color: var(--text-main);
+      margin: 0; padding: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* --- FONDO ESTELAR --- */
+    .stars-container {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; pointer-events: none;
+    }
+    [data-theme="light"] .stars-container { filter: invert(1) opacity(0.2); }
     
-body {
-  font-family: 'Segoe UI', sans-serif;
-  background: linear-gradient(rgba(238,241,245,0.92), rgba(238,241,245,0.92)), 
-              url('https://images.unsplash.com/photo-1612521095823-9aa3be7a4f4f?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
-  background-size: cover;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  margin: 0;
-}
+    .stars {
+      width: 2px; height: 2px; background: transparent;
+      box-shadow: 140px 140px #FFF, 540px 340px #FFF, 340px 940px #FFF, 
+                  740px 240px #FFF, 840px 440px #FFF, 240px 540px #FFF;
+      animation: animStar 80s linear infinite;
+    }
+    @keyframes animStar { from { transform: translateY(0px); } to { transform: translateY(-2000px); } }
 
+    /* --- UI COMPONENTS --- */
+    .theme-toggle {
+      position: fixed; top: 20px; right: 20px; z-index: 200;
+      background: var(--card-bg); color: var(--text-main);
+      border: 1px solid var(--card-border);
+      width: 45px; height: 45px; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; backdrop-filter: blur(10px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
 
-    .contenedor {
-      width: 100%;
-      max-width: 480px;
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      padding: 2rem;
-      box-sizing: border-box;
+    .main-container {
+      width: 100%; max-width: 600px;
+      padding: 40px 20px;
+      z-index: 10;
     }
 
     h2 {
-      margin-top: 0;
-      font-size: 1.4rem;
-      text-align: center;
+      text-align: center; font-size: 2.2rem; font-weight: 800; margin-bottom: 5px; margin-top: 20px;
+      background: linear-gradient(90deg, #166534 0%, #22c55e 25%, #4ade80 50%, #166534 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      animation: rgbFlow 4s linear infinite;
+      letter-spacing: -1px; line-height: 1.1;
+    }
+    @keyframes rgbFlow { to { background-position: 200% center; } }
+
+    .subtitle {
+      text-align: center; color: var(--text-sec); margin-bottom: 30px;
+      font-size: 0.95rem; line-height: 1.4;
     }
 
-    p.instruccion {
-      color: #555;
-      margin-top: 0;
-      margin-bottom: 1.5rem;
-      font-size: 0.95rem;
-      text-align: center;
+    /* --- FORMULARIO --- */
+    .control-group {
+      display: flex; flex-direction: column; gap: 15px;
+      background: var(--card-bg);
+      padding: 20px; border-radius: 20px;
+      border: 1px solid var(--card-border);
+      box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+    }
+
+    label {
+      font-size: 0.75rem; font-weight: 700; color: var(--accent);
+      text-transform: uppercase; letter-spacing: 1.2px; margin-left: 5px;
     }
 
     select {
       width: 100%;
-      padding: 10px 14px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 16px;
+      padding: 16px 20px;
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 1rem; font-family: 'Outfit', sans-serif; font-weight: 500;
+      appearance: none; cursor: pointer;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat; background-position: right 20px center; background-size: 14px;
     }
 
-    .resultados {
-      margin-top: 1rem;
-      display: none;
+    select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 20px var(--accent-glow); }
+    select:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
+
+    /* --- RESULTADOS --- */
+    .resultados-grid {
+      margin-top: 25px;
+      display: grid; gap: 15px;
+      padding-bottom: 50px;
     }
 
-    .card {
-      background: #f9f9f9;
-      margin-bottom: 12px;
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid #ddd;
+    .station-card {
+      background: var(--card-bg);
+      padding: 18px; border-radius: 16px;
+      border: 1px solid var(--card-border);
+      display: flex; flex-direction: column; gap: 12px;
+      position: relative; overflow: hidden;
+      animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      opacity: 0; transform: scale(0.95);
     }
 
-    .card h4 {
-      margin: 0 0 6px;
-      color: #333;
-      font-size: 1rem;
+    .station-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+    .station-card::before {
+      content:''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: var(--accent); box-shadow: 2px 0 10px var(--accent-glow);
+    }
+
+    .station-header {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    .station-comuna {
+      font-size: 0.75rem; color: var(--accent); font-weight: 800;
+      text-transform: uppercase; letter-spacing: 1px;
+      background: rgba(34, 197, 94, 0.1); padding: 4px 8px; border-radius: 6px;
+    }
+
+    /* Píldora del Logo (Fondo blanco para contraste) */
+    .brand-pill {
+      background: #ffffff;
+      padding: 4px 10px;
+      border-radius: 50px;
+      display: flex; align-items: center; justify-content: center;
+      height: 32px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .brand-logo {
+      height: 20px; /* Tamaño ajustado al texto */
+      width: auto;
+      object-fit: contain;
+      display: block;
+    }
+
+    .station-address {
+      font-size: 1.1rem; font-weight: 700; color: var(--text-main);
+      line-height: 1.3; margin-top: -5px;
     }
 
     .map-btn {
-      display: inline-block;
-      margin-top: 8px;
-      padding: 6px 10px;
-      background: #0078D4;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      text-decoration: none;
-      font-size: 14px;
+      margin-top: 5px;
+      background: var(--btn-bg);
+      color: white; text-decoration: none;
+      padding: 14px; border-radius: 12px;
+      text-align: center; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 15px rgba(37, 211, 102, 0.2);
     }
+    
+    .map-btn:active { transform: scale(0.97); }
 
-    .map-btn:hover {
-      background: #005fa3;
+    /* Empty State */
+    .empty-state { text-align: center; margin-top: 60px; opacity: 0.4; animation: fadeIn 1s; }
+    .empty-icon { font-size: 5rem; margin-bottom: 10px; filter: grayscale(1); transition: 0.3s; }
+    [data-theme="light"] .empty-icon { filter: grayscale(0); }
+
+    @keyframes popIn { to { opacity: 1; transform: scale(1); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 0.4; } }
+
+    @media(max-width: 480px) {
+      .main-container { padding: 80px 15px 40px; }
+      h2 { font-size: 1.8rem; }
     }
-  
-.resultados {
-  margin-top: 1rem;
-  display: none;
-  transition: opacity 0.3s ease-in-out;
-}
-
-.resultados.mostrar {
-  display: block;
-  opacity: 1;
-}
-
-.resultados.ocultar {
-  opacity: 0;
-  transition: opacity 0.2s ease-in;
-}
-
-.caja-resultados {
-  display: none;
-  border: 1px solid #ccc;
-  border-radius: 12px;
-  padding: 1rem;
-  background: #fefefe;
-  max-height: 300px;
-  overflow-y: auto;
-  transition: opacity 0.3s ease;
-}
-
-</style>
+  </style>
 </head>
 <body>
 
-  <div class="contenedor">
-    <h2>🚗 Estaciones de Carga GLP</h2>
-    <p class="instruccion">
-      Selecciona una región y luego una comuna para ver las estaciones disponibles. Puedes hacer clic en "Ver en Google Maps" para obtener la ubicación exacta.
-    </p>
+  <button class="theme-toggle" id="themeBtn">🌙</button>
 
-    <select id="regionFiltro">
-      <option value="">Selecciona una región</option>
-    </select>
-
-    <select id="comunaFiltro" disabled>
-      <option value="">Selecciona una comuna</option>
-    </select>
-
-    <div id="resultados" class="resultados">
-    <div class="caja-resultados" style="display: none; border: 1px solid #ccc; border-radius: 12px; padding: 1rem; background: #fefefe;"></div>
-  </div>
+  <div class="stars-container">
+    <div class="stars"></div>
   </div>
 
-  
+  <div class="main-container">
+    <h2>Zona de Carga GLP</h2>
+    <p class="subtitle">Localiza estaciones certificadas y navega directo con GPS.</p>
+
+    <div class="control-group">
+      <div>
+        <label for="regionFiltro">1. Elige Región</label>
+        <select id="regionFiltro">
+          <option value="">Seleccionar...</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="comunaFiltro">2. Elige Comuna (Opcional)</label>
+        <select id="comunaFiltro" disabled>
+          <option value="">Todas las comunas</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="resultados" class="resultados-grid"></div>
+
+    <div id="emptyState" class="empty-state">
+      <div class="empty-icon">⛽</div>
+      <p style="font-weight:600;">Selecciona una región para escanear el área.</p>
+    </div>
+  </div>
+
 <script>
+  // --- TEMA ---
+  const themeBtn = document.getElementById('themeBtn');
+  const html = document.documentElement;
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  html.setAttribute('data-theme', savedTheme);
+  themeBtn.innerText = savedTheme === 'dark' ? '☀️' : '🌙';
+
+  themeBtn.addEventListener('click', () => {
+    const current = html.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    themeBtn.innerText = next === 'dark' ? '☀️' : '🌙';
+  });
+
+  // --- LOGOS URLS ---
+  const logos = {
+    "Gasco": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Logo_Gasco.svg/1200px-Logo_Gasco.svg.png",
+    "Abastible": "https://storage.googleapis.com/web-abastible-prod/2025/03/Logo_Abastible.png",
+    "Lipigas": "https://3go.cl/wp-content/uploads/2018/05/logo-lipigas.png",
+    "Copec": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Copec_Logo_2023.svg/2560px-Copec_Logo_2023.svg.png",
+    "Petrobras": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Petrobras-Logo.svg/2560px-Petrobras-Logo.svg.png",
+    "Shell": "https://1000marcas.net/wp-content/uploads/2019/12/Logo-Shell.png"
+  };
+
+  // --- BASE DE DATOS ---
   const estaciones = [
-    { region: "Tarapacá", comuna: "Alto Hospicio", direccion: "Ruta A-616, Manzana C, Lote A" },
-    { region: "Atacama", comuna: "Copiapó", direccion: "Los Loros 1264" },
-    { region: "Coquimbo", comuna: "La Serena", direccion: "Balmaceda, Paradero 10 1/2" },
-    { region: "Arica", comuna: "Arica", direccion: "Alejandro Azolas 2693" },
-    { region: "Ñuble", comuna: "Chillán", direccion: "Av. Collín 1101" },
-    { region: "Maule", comuna: "Linares", direccion: "Av. León Bustos 1319" },
-    { region: "Maule", comuna: "Curicó", direccion: "Pasaje 32, 665" },
-    { region: "Maule", comuna: "Talca", direccion: "Uno Norte 2315" },
-    { region: "Biobío", comuna: "Concepción", direccion: "Anibal Pinto 1835" },
-    { region: "Biobío", comuna: "Los Ángeles", direccion: "Av. Francisco Encina 1451" },
-    { region: "Araucanía", comuna: "Angol", direccion: "Juan Sallato 2938" },
-    { region: "Araucanía", comuna: "Temuco", direccion: "Manuel Recabarren 01940" },
-    { region: "Ríos", comuna: "Valdivia", direccion: "Schneider 3620" },
-    { region: "Ríos", comuna: "Valdivia", direccion: "Av. Pedro Aguirre Cerda 670" },
-    { region: "Lagos", comuna: "Osorno", direccion: "Av. Mackenna 2019" },
-    { region: "Lagos", comuna: "Puerto Montt", direccion: "Maximiliano Uribe 2067" },
-    { region: "O'Higgins", comuna: "Rengo", direccion: "Luis Jorquera 1291" },
-    { region: "O'Higgins", comuna: "Rancagua", direccion: "Manuel Montt 0480" },
-    { region: "O'Higgins", comuna: "Rancagua", direccion: "Bernardo O'Higgins 1090" },
-    { region: "Metropolitana", comuna: "Quinta Normal", direccion: "Vicuña Rozas 5891" },
-    { region: "Metropolitana", comuna: "Pudahuel", direccion: "San Pablo 8529" },
-    { region: "Metropolitana", comuna: "Peñalolén", direccion: "Av. Tobalaba 11567" },
-    { region: "Metropolitana", comuna: "Independencia", direccion: "Av. Independencia 1517" },
-    { region: "Metropolitana", comuna: "Vitacura", direccion: "Av. Vitacura 5579" },
-    { region: "Metropolitana", comuna: "Providencia", direccion: "Av. Francisco Bilbao 2682" },
-    { region: "Metropolitana", comuna: "Pedro Aguirre Cerda", direccion: "Bascuñán Guerrero 2445" },
-    { region: "Metropolitana", comuna: "Ñuñoa", direccion: "Av. José Pedro Alessandri 1039" },
-    { region: "Metropolitana", comuna: "La Granja", direccion: "Yungay 0923" },
-    { region: "Metropolitana", comuna: "La Florida", direccion: "Real Alicante 6698" },
-    { region: "Metropolitana", comuna: "El Bosque", direccion: "Av. Lo Espejo 0450" },
-    { region: "Metropolitana", comuna: "Conchalí", direccion: "Av. Independencia 6117" },
-    { region: "Metropolitana", comuna: "Macul", direccion: "Camino Agrícola 2589" },
-    { region: "Metropolitana", comuna: "Puente Alto", direccion: "Eyzaguirre 2816" },
-    { region: "Metropolitana", comuna: "Puente Alto", direccion: "Av. Eyzaguirre 2436" },
-    { region: "Valparaíso", comuna: "Viña del Mar", direccion: "Av. Alessandri 3401" },
-    { region: "Valparaíso", comuna: "Quilpué", direccion: "Freire 677" },
-    { region: "Valparaíso", comuna: "Quillota", direccion: "Blanco Encalada 661" },
-    { region: "Valparaíso", comuna: "Valparaíso", direccion: "Av. Playa Ancha 697" },
-    { region: "Valparaíso", comuna: "Valparaíso", direccion: "Errázuriz 2364" }
+    // TARAPACÁ
+    { r: "Tarapacá", c: "Iquique", d: "Desiderio Garcia 144", m: "Lipigas" },
+    { r: "Tarapacá", c: "Iquique", d: "Tadeo Hanke 1870", m: "Lipigas" },
+    { r: "Tarapacá", c: "Arica", d: "Alejandro Azolas 2693", m: "Gasco" },
+    
+    // ANTOFAGASTA
+    { r: "Antofagasta", c: "Antofagasta", d: "Radomiro Tomic 7501", m: "Gasco" },
+    { r: "Antofagasta", c: "Antofagasta", d: "Pedro Aguirre Cerda 6420", m: "Lipigas" },
+    { r: "Antofagasta", c: "Calama", d: "Huaytiquina 1525", m: "Lipigas" },
+
+    // ATACAMA
+    { r: "Atacama", c: "Copiapó", d: "Los Loros 1264", m: "Gasco" },
+    { r: "Atacama", c: "Vallenar", d: "Miraflores 510", m: "Lipigas" },
+
+    // COQUIMBO
+    { r: "Coquimbo", c: "La Serena", d: "Balmaceda 3850", m: "Gasco" },
+    { r: "Coquimbo", c: "Coquimbo", d: "Las Azucenas 519", m: "Gasco" },
+
+    // VALPARAÍSO
+    { r: "Valparaíso", c: "Viña del Mar", d: "Av. Alessandri 3401", m: "Abastible" },
+    { r: "Valparaíso", c: "Quilpué", d: "Freire 677", m: "Gasco" },
+    { r: "Valparaíso", c: "Quillota", d: "Blanco Encalada 661", m: "Gasco" },
+    { r: "Valparaíso", c: "Valparaíso", d: "Av. Playa Ancha 697", m: "Gasco" },
+
+    // METROPOLITANA
+    { r: "Metropolitana", c: "Santiago", d: "Bascuñán Guerrero 2445", m: "Copec" },
+    { r: "Metropolitana", c: "Maipú", d: "Av. Pajaritos 400", m: "Gasco" },
+    { r: "Metropolitana", c: "Maipú", d: "Alberto Llona 640", m: "Copec" },
+    { r: "Metropolitana", c: "La Florida", d: "Av. Vicuña Mackenna 9841", m: "Gasco" },
+    { r: "Metropolitana", c: "Puente Alto", d: "Eyzaguirre 2816", m: "Abastible" },
+    { r: "Metropolitana", c: "Quinta Normal", d: "Vicuña Rozas 5891", m: "Abastible" },
+    { r: "Metropolitana", c: "Independencia", d: "Av. Independencia 1517", m: "Copec" },
+    { r: "Metropolitana", c: "Peñalolén", d: "Tobalaba 11567", m: "Copec" },
+    { r: "Metropolitana", c: "Providencia", d: "Av. Francisco Bilbao 2682", m: "Copec" },
+    { r: "Metropolitana", c: "Las Condes", d: "Cristóbal Colón 7550", m: "Petrobras" },
+    { r: "Metropolitana", c: "San Bernardo", d: "Padre Hurtado 15787", m: "Gasco" },
+    { r: "Metropolitana", c: "Buin", d: "Ruta 5 Sur 993", m: "Lipigas" },
+
+    // O'HIGGINS
+    { r: "O'Higgins", c: "Rancagua", d: "Manuel Montt 0480", m: "Gasco" },
+    { r: "O'Higgins", c: "Rengo", d: "Luis Jorquera 1291", m: "Gasco" },
+
+    // MAULE
+    { r: "Maule", c: "Curicó", d: "Av. Balmaceda 2323-B", m: "Gasco" },
+    { r: "Maule", c: "Talca", d: "Uno Norte 2315", m: "Gasco" },
+    { r: "Maule", c: "Linares", d: "Av. León Bustos 1319", m: "Gasco" },
+
+    // ÑUBLE
+    { r: "Ñuble", c: "Chillán", d: "Av. Collín 1101", m: "Gasco" },
+
+    // BIOBÍO
+    { r: "Biobío", c: "Concepción", d: "Anibal Pinto 1835", m: "Gasco" },
+    { r: "Biobío", c: "Los Ángeles", d: "Av. Francisco Encina 1451", m: "Gasco" },
+    { r: "Biobío", c: "Talcahuano", d: "Gran Bretaña 4561", m: "Gasco" },
+
+    // ARAUCANÍA
+    { r: "Araucanía", c: "Temuco", d: "Manuel Recabarren 01940", m: "Gasco" },
+    { r: "Araucanía", c: "Angol", d: "Juan Sallato 2938", m: "Gasco" },
+
+    // LOS RÍOS
+    { r: "Los Ríos", c: "Valdivia", d: "Schneider 3620", m: "Gasco" },
+
+    // LOS LAGOS
+    { r: "Los Lagos", c: "Osorno", d: "Av. Mackenna 2019", m: "Gasco" },
+    { r: "Los Lagos", c: "Puerto Montt", d: "Maximiliano Uribe 2067", m: "Gasco" },
+    { r: "Los Lagos", c: "Castro", d: "O'Higgins 601", m: "Gasco" },
+
+    // MAGALLANES
+    { r: "Magallanes", c: "Punta Arenas", d: "Eduardo Frey 314", m: "Gasco" }
   ];
 
-  const regionFiltro = document.getElementById("regionFiltro");
-  const comunaFiltro = document.getElementById("comunaFiltro");
-  const resultadosDiv = document.getElementById("resultados");
+  const el = {
+    region: document.getElementById("regionFiltro"),
+    comuna: document.getElementById("comunaFiltro"),
+    grid: document.getElementById("resultados"),
+    empty: document.getElementById("emptyState")
+  };
 
-  const regiones = [...new Set(estaciones.map(e => e.region))];
-  // Cargar selección previa si existe
-  const savedRegion = localStorage.getItem("regionSeleccionada");
-  const savedComuna = localStorage.getItem("comunaSeleccionada");
-
-  if (savedRegion) {
-    regionFiltro.value = savedRegion;
-    const comunas = [...new Set(estaciones.filter(e => e.region === savedRegion).map(e => e.comuna))];
-    comunas.forEach(comuna => {
+  function init() {
+    const regionesUnicas = [...new Set(estaciones.map(e => e.r))].sort();
+    regionesUnicas.forEach(r => {
       const opt = document.createElement("option");
-      opt.value = comuna;
-      opt.textContent = comuna;
-      comunaFiltro.appendChild(opt);
+      opt.value = r; opt.innerText = r;
+      el.region.appendChild(opt);
     });
-    comunaFiltro.disabled = false;
+
+    el.region.addEventListener("change", () => {
+      updateComunas(el.region.value);
+      renderResults(); 
+    });
+    
+    el.comuna.addEventListener("change", renderResults);
   }
 
-  if (savedComuna) {
-    comunaFiltro.value = savedComuna;
+  function updateComunas(region) {
+    el.comuna.innerHTML = '<option value="">Todas las comunas</option>';
+    if (!region) {
+      el.comuna.disabled = true;
+      return;
+    }
+    const comunas = [...new Set(estaciones.filter(e => e.r === region).map(e => e.c))].sort();
+    comunas.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c; opt.innerText = c;
+      el.comuna.appendChild(opt);
+    });
+    el.comuna.disabled = false;
   }
 
-  mostrarResultados();
+  function renderResults() {
+    const reg = el.region.value;
+    const com = el.comuna.value;
 
-  regionFiltro.addEventListener("change", () => {
-    const regionSeleccionada = regionFiltro.value;
-    localStorage.setItem("regionSeleccionada", regionSeleccionada);
-    comunaFiltro.innerHTML = '<option value="">Selecciona una comuna</option>';
-    comunaFiltro.disabled = !regionSeleccionada;
-
-    if (regionSeleccionada) {
-      const comunas = [...new Set(estaciones.filter(e => e.region === regionSeleccionada).map(e => e.comuna))];
-      comunas.forEach(comuna => {
-        const opt = document.createElement("option");
-        opt.value = comuna;
-        opt.textContent = comuna;
-        comunaFiltro.appendChild(opt);
-      });
+    if (!reg) {
+      el.grid.innerHTML = '';
+      el.empty.style.display = 'block';
+      return;
     }
 
-    localStorage.removeItem("comunaSeleccionada");
-    mostrarResultados();
-  });
+    const matches = estaciones.filter(e => e.r === reg && (com === "" || e.c === com));
+    el.grid.innerHTML = '';
+    
+    if (matches.length > 0) {
+      el.empty.style.display = 'none';
+      matches.forEach((est, index) => {
+        const delay = index * 0.05;
+        const query = encodeURIComponent(`${est.d}, ${est.c}, Chile`);
+        const mapLink = `https://www.google.com/maps/search/?api=1&query=${query}`;
+        
+        // Obtener Logo o Texto Fallback
+        const logoUrl = logos[est.m];
+        const brandHtml = logoUrl 
+          ? `<div class="brand-pill"><img src="${logoUrl}" alt="${est.m}" class="brand-logo"></div>` 
+          : `<div class="brand-pill" style="font-weight:700; color:#333;">${est.m}</div>`;
 
-  comunaFiltro.addEventListener("change", () => {
-    localStorage.setItem("comunaSeleccionada", comunaFiltro.value);
-    mostrarResultados();
-  });
-
-  regiones.forEach(region => {
-    const opt = document.createElement("option");
-    opt.value = region;
-    opt.textContent = region;
-    regionFiltro.appendChild(opt);
-  });
-
-  regionFiltro.addEventListener("change", () => {
-    const regionSeleccionada = regionFiltro.value;
-    comunaFiltro.innerHTML = '<option value="">Selecciona una comuna</option>';
-    comunaFiltro.disabled = !regionSeleccionada;
-
-    if (regionSeleccionada) {
-      const comunas = [...new Set(estaciones.filter(e => e.region === regionSeleccionada).map(e => e.comuna))];
-      comunas.forEach(comuna => {
-        const opt = document.createElement("option");
-        opt.value = comuna;
-        opt.textContent = comuna;
-        comunaFiltro.appendChild(opt);
-      });
-    }
-
-    mostrarResultados();
-  });
-
-  comunaFiltro.addEventListener("change", mostrarResultados);
-
-  function mostrarResultados() {
-    const region = regionFiltro.value;
-    const comuna = comunaFiltro.value;
-
-    const coincidencias = estaciones.filter(e =>
-      (!region || e.region === region) &&
-      (!comuna || e.comuna === comuna)
-    );
-
-    const caja = resultadosDiv.querySelector('.caja-resultados');
-    caja.innerHTML = "";
-
-    if (coincidencias.length > 0) {
-      coincidencias.forEach(est => {
-        const card = document.createElement("div");
-        card.className = "card";
-        const direccionEncoded = encodeURIComponent(`${est.direccion}, ${est.comuna}, Chile`);
+        const card = document.createElement('div');
+        card.className = 'station-card';
+        card.style.animationDelay = `${delay}s`;
+        
         card.innerHTML = `
-          <h4>${est.region} - ${est.comuna}</h4>
-          <p>${est.direccion}</p>
-          <a class="map-btn" target="_blank" href="https://www.google.com/maps/search/?api=1&query=${direccionEncoded}">
-            Ver en Google Maps
-          </a>`;
-        caja.appendChild(card);
+          <div class="station-header">
+            <span class="station-comuna">${est.c}</span>
+            ${brandHtml}
+          </div>
+          <div class="station-address">${est.d}</div>
+          <a href="${mapLink}" target="_blank" class="map-btn">
+            🚗 IR AHORA (GPS)
+          </a>
+        `;
+        el.grid.appendChild(card);
       });
-      resultadosDiv.classList.add("mostrar");
-      resultadosDiv.classList.remove("ocultar");
-      caja.style.display = "block";
     } else {
-      resultadosDiv.classList.add("ocultar");
-      resultadosDiv.classList.remove("mostrar");
-      caja.style.display = "none";
+      el.empty.style.display = 'block';
+      el.empty.innerHTML = '<div class="empty-icon">❌</div><p>No hay estaciones registradas en esta zona.</p>';
     }
   }
+
+  init();
 </script>
-
-
 </body>
 </html>
